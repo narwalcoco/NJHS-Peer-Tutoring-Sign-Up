@@ -1,12 +1,13 @@
 // ================= CONFIG =================
 const SHEETDB_API = "https://sheetdb.io/api/v1/08x1bxbiwbkmv";
 
-// ================= HELPERS =================
+// ================= GLOBALS =================
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-const sessions = ["EP1", "EP2", "After"];
+let enabledAfterSchoolDays = ["Wednesday"]; // Wednesday always enabled
 
 const qs = (id) => document.getElementById(id);
 
+// ================= POPUP =================
 function showPopup(msg) {
   const box = qs("alertPopup");
   const text = qs("popupMessage");
@@ -36,9 +37,18 @@ async function addRow(row) {
 }
 
 async function deleteRow(name, day, session) {
-  await fetch(`${SHEETDB_API}/name/${encodeURIComponent(name)}/day/${day}/session/${session}`, {
-    method: "DELETE"
-  });
+  await fetch(
+    `${SHEETDB_API}/name/${encodeURIComponent(name)}/day/${day}/session/${session}`,
+    { method: "DELETE" }
+  );
+}
+
+// ================= AFTER SCHOOL PERSIST =================
+async function getAfterSchoolDays() {
+  const data = await fetchAll();
+  return data
+    .filter(r => r.name === "__AFTER__" && r.session === "ENABLED")
+    .map(r => r.day);
 }
 
 // ================= SIGNUP =================
@@ -55,22 +65,22 @@ async function handleSignup() {
 
   const data = await fetchAll();
 
-  const exists = (session) => data.some(r => r.name === name && r.day === day && r.session === session);
+  const exists = (session) =>
+    data.some(r => r.name === name && r.day === day && r.session === session);
 
-  if (ep1 && exists("EP1")) return showPopup("You are already signed up for EP1 on this day.");
-  if (ep2 && exists("EP2")) return showPopup("You are already signed up for EP2 on this day.");
-  if (after && exists("After")) return showPopup("You are already signed up for After School.");
+  if (ep1 && exists("EP1")) return showPopup("Already signed up for EP1.");
+  if (ep2 && exists("EP2")) return showPopup("Already signed up for EP2.");
+  if (after && exists("After")) return showPopup("Already signed up for After School.");
 
   // EP1 auto-add EP2 if fewer than 5 tutors
   if (ep1 && !ep2) {
     const ep2Count = data.filter(r => r.day === day && r.session === "EP2").length;
     if (ep2Count < 5) {
-      const acceptEP2 = confirm(
+      const ok = confirm(
         "There are not enough tutors for EP2. By signing up for EP1 today, " +
-        "you will automatically be signed up for EP2. You can later remove yourself from EP2 if enough people sign up.\n\n" +
-        "Do you want to proceed with EP2?"
+        "you will automatically be signed up for EP2. You can remove yourself later.\n\nContinue?"
       );
-      if (!acceptEP2) return;
+      if (!ok) return;
       await addRow({ name, day, session: "EP2" });
     }
   }
@@ -85,28 +95,34 @@ async function handleSignup() {
   showPopup("Signup complete!");
 }
 
-// ================= REMOVE =================
+// ================= REMOVE (FIXED) =================
 async function removeFromDays() {
   const name = qs("removeName")?.value.trim();
   if (!name) return showPopup("Enter your name.");
 
-  const checkedDays = Array.from(document.querySelectorAll(".removeDayCheck:checked")).map(b => b.value);
-  if (!checkedDays.length) return showPopup("Select at least one day to remove.");
+  const selectedDays = Array.from(
+    document.querySelectorAll(".removeDayCheck:checked")
+  ).map(b => b.value);
 
-  if (!confirm("Are you sure you want to remove yourself from the selected days?")) return;
+  if (!selectedDays.length)
+    return showPopup("Select at least one day.");
+
+  if (!confirm("Are you sure you want to remove yourself from the selected days?"))
+    return;
 
   const data = await fetchAll();
 
-  for (const day of checkedDays) {
-    data
-      .filter(r => r.name === name && r.day === day)
-      .forEach(r => deleteRow(name, day, r.session));
+  for (const day of selectedDays) {
+    const rows = data.filter(r => r.name === name && r.day === day);
+    for (const r of rows) {
+      await deleteRow(name, day, r.session);
+    }
   }
 
   clearRemoveForm();
   await renderCalendar();
   populateRemovePage();
-  showPopup("Removed from all selected days.");
+  showPopup("Removed from selected days.");
 }
 
 // ================= CALENDAR =================
@@ -115,8 +131,9 @@ async function renderCalendar() {
   if (!table) return;
 
   const data = await fetchAll();
-  const tbody = table.tBodies[0];
+  enabledAfterSchoolDays = await getAfterSchoolDays();
 
+  const tbody = table.tBodies[0];
   tbody.innerHTML = `
     <tr><td>EP1</td></tr>
     <tr><td>EP2</td></tr>
@@ -132,7 +149,6 @@ async function renderCalendar() {
       data.filter(r => r.day === day && r.session === "After").map(r => r.name).join("<br>");
   });
 
-  // update signup forms After School visibility
   updateAfterSchoolCheckbox();
 }
 
@@ -140,6 +156,7 @@ async function renderCalendar() {
 function populateRemovePage() {
   const box = qs("removeDayList");
   if (!box) return;
+
   box.innerHTML = days.map(d =>
     `<label><input type="checkbox" class="removeDayCheck" value="${d}"> ${d}</label><br>`
   ).join("");
@@ -149,6 +166,7 @@ function populateRemovePage() {
 function populateDaySelectArea() {
   const area = qs("daySelectArea");
   if (!area) return;
+
   area.innerHTML = days.map(d =>
     `<label><input type="radio" name="day" value="${d}"> ${d}</label>`
   ).join(" ");
@@ -157,102 +175,76 @@ function populateDaySelectArea() {
 }
 
 function updateAfterSchoolCheckbox() {
-  const selectedDay = document.querySelector("input[name='day']:checked")?.value;
+  const day = document.querySelector("input[name='day']:checked")?.value;
   const afterLabel = qs("afterSchoolLabel");
-  const ep1El = qs("ep1Checkbox");
-  const ep2El = qs("ep2Checkbox");
+  const ep1 = qs("ep1Checkbox");
+  const ep2 = qs("ep2Checkbox");
 
-  if (!selectedDay) return;
+  if (!day) return;
 
-  // Show After School only if session enabled or Wednesday
-  const showAfter = selectedDay === "Wednesday" || (tutorDataAfterSchool[selectedDay] ?? false);
+  const showAfter = day === "Wednesday" || enabledAfterSchoolDays.includes(day);
   if (afterLabel) afterLabel.style.display = showAfter ? "" : "none";
 
-  // Hide EP1/EP2 for After School-only day (Wednesday)
-  if (selectedDay === "Wednesday") {
-    if (ep1El) ep1El.parentElement.style.display = "none";
-    if (ep2El) ep2El.parentElement.style.display = "none";
-    if (ep1El) ep1El.checked = false;
-    if (ep2El) ep2El.checked = false;
+  if (day === "Wednesday") {
+    ep1.parentElement.style.display = "none";
+    ep2.parentElement.style.display = "none";
+    ep1.checked = false;
+    ep2.checked = false;
   } else {
-    if (ep1El) ep1El.parentElement.style.display = "";
-    if (ep2El) ep2El.parentElement.style.display = "";
-    if (qs("afterCheckbox")) qs("afterCheckbox").checked = false;
+    ep1.parentElement.style.display = "";
+    ep2.parentElement.style.display = "";
+    qs("afterCheckbox").checked = false;
   }
 }
 
 function clearSignupForm() {
   qs("nameInput").value = "";
   document.querySelectorAll("input[name='day']").forEach(r => r.checked = false);
-  ["ep1Checkbox", "ep2Checkbox", "afterCheckbox"].forEach(id => {
-    if (qs(id)) qs(id).checked = false;
-  });
-  updateAfterSchoolCheckbox();
+  ["ep1Checkbox", "ep2Checkbox", "afterCheckbox"].forEach(id => qs(id).checked = false);
 }
 
 function clearRemoveForm() {
   qs("removeName").value = "";
-  document.querySelectorAll(".removeDayCheck").forEach(r => r.checked = false);
+  document.querySelectorAll(".removeDayCheck").forEach(c => c.checked = false);
 }
 
-// ================= DEBUG MENU =================
-const tutorDataAfterSchool = { Wednesday: true }; // track After School sessions
-
-document.addEventListener("keydown", e => {
+// ================= DEBUG MENU (FIXED) =================
+document.addEventListener("keydown", (e) => {
   window.debugBuffer = (window.debugBuffer || "") + e.key;
   if (window.debugBuffer.includes("debug123")) {
-    const dbg = qs("debugMenu");
-    if (dbg) dbg.classList.add("open");
+    qs("debugMenu")?.classList.add("open");
     window.debugBuffer = "";
   }
   if (window.debugBuffer.length > 30) window.debugBuffer = "";
 });
 
 function closeDebugMenu() {
-  const dbg = qs("debugMenu");
-  if (dbg) dbg.classList.remove("open");
+  qs("debugMenu")?.classList.remove("open");
 }
 
-function debugEnableAfterSchool() {
+async function debugEnableAfterSchool() {
   const sel = qs("afterSchoolDaySelect");
-  if (!sel) return showPopup("No day selector found.");
+  if (!sel) return showPopup("No selector found.");
   const day = sel.value;
-  if (!day) return showPopup("Please pick a day.");
 
-  tutorDataAfterSchool[day] = true;
-  showPopup("After School session enabled for " + day + ".");
+  const existing = await getAfterSchoolDays();
+  if (existing.includes(day))
+    return showPopup("After School already enabled for " + day + ".");
+
+  await addRow({ name: "__AFTER__", day, session: "ENABLED" });
+
+  enabledAfterSchoolDays.push(day);
   updateAfterSchoolCheckbox();
-}
-
-function clearAllData() {
-  if (!confirm("Are you sure? This will delete all data.")) return;
-  // delete all rows from SheetDB
-  fetchAll().then(data => {
-    data.forEach(r => deleteRow(r.name, r.day, r.session));
-  });
-  populateRemovePage();
-  populateDaySelectArea();
-  clearSignupForm();
-  renderCalendar();
-  showPopup("All data cleared.");
-}
-
-// populate debug menu options
-function populateDebugMenuDays() {
-  const sel = qs("afterSchoolDaySelect");
-  if (!sel) return;
-  sel.innerHTML = days.map(d => `<option value="${d}">${d}</option>`).join("");
+  showPopup("After School enabled for " + day + ".");
 }
 
 // ================= INIT =================
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   populateDaySelectArea();
   populateRemovePage();
-  renderCalendar();
-  populateDebugMenuDays();
+  await renderCalendar();
 
-  // listen for day change
-  document.addEventListener("change", e => {
-    if (e.target && e.target.name === "day") updateAfterSchoolCheckbox();
+  document.addEventListener("change", (e) => {
+    if (e.target.name === "day") updateAfterSchoolCheckbox();
   });
 });
