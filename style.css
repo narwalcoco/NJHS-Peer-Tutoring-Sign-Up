@@ -1,0 +1,138 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #eef1f5;
+  margin: 0;
+  padding: 0;
+}
+
+/* Header + Nav */
+header {
+  background: #222;
+  color: white;
+  padding: 15px;
+  text-align: center;
+}
+
+nav a {
+  color: white;
+  margin: 0 10px;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* Centering container */
+.centerContainer {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+/* Card styling */
+.card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  width: 350px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+input,
+button {
+  padding: 8px;
+  margin: 5px 0;
+  font-size: 15px;
+}
+
+button {
+  cursor: pointer;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+button:hover {
+  opacity: 0.85;
+}
+
+.danger {
+  background: #d00000;
+}
+
+/* Popup */
+.popup {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.popupBox {
+  background: white;
+  padding: 20px;
+  width: 300px;
+  margin: 120px auto;
+  text-align: center;
+  border-radius: 10px;
+}
+
+/* Debug Menu */
+.debugMenu {
+  position: fixed;
+  right: -500px;
+  top: 0;
+  width: 330px;
+  height: 100%;
+  background: #333;
+  color: white;
+  padding: 20px;
+  transition: right 0.4s ease-in-out;
+  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.4);
+  z-index: 99999;
+}
+
+.debugMenu.open {
+  right: 0;
+}
+
+.closeDebug {
+  float: right;
+  background: #444;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+/* Calendar Table */
+table {
+  width: 90%;
+  margin: 30px auto;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+th {
+  background: #007bff;
+  color: white;
+  padding: 15px;
+  font-size: 18px;
+}
+
+td {
+  border: 1px solid #ccc;
+  padding: 12px;
+  text-align: center;
+  font-size: 15px;
+  min-height: 60px;
+}
+
+td:first-child {
+  font-weight: bold;
+  background: #f5f7fa;
+}

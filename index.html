@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Tutor Signup</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <header>
+    <h1>Tutor Signup</h1>
+    <nav>
+      <a href="index.html">Sign Up</a>
+      <a href="calendar.html">Calendar</a>
+      <a href="remove.html">Remove Yourself</a>
+    </nav>
+  </header>
+
+  <div class="centerContainer">
+    <div id="main" class="card">
+      <h2>Sign Up</h2>
+
+      <label>Your Full Name:</label>
+      <input id="nameInput" type="text">
+
+      <h3>Select Day</h3>
+      <div id="daySelectArea">
+        <label><input type="radio" name="day" value="Tuesday"> Tuesday</label>
+        <label><input type="radio" name="day" value="Thursday"> Thursday</label>
+
+        <!-- After School day will be injected here dynamically by JS -->
+        <div id="dynamicAfterSchoolDay"></div>
+      </div>
+
+      <h3>Select Sessions</h3>
+      <label><input type="checkbox" id="ep1Checkbox"> EP1</label>
+      <label><input type="checkbox" id="ep2Checkbox"> EP2</label>
+
+      <!-- Only shows when After School enabled -->
+      <label id="afterSchoolLabel" style="display:none;">
+        <input type="checkbox" id="afterCheckbox"> After School
+      </label>
+
+      <br><br>
+
+      <button onclick="handleSignup()">Sign Up</button>
+    </div>
+  </div>
+
+  <!-- Popup -->
+  <div id="alertPopup" class="popup">
+    <div class="popupBox">
+      <p id="popupMessage"></p>
+      <button onclick="closePopup()">OK</button>
+    </div>
+  </div>
+
+  <!-- Debug Menu -->
+  <div id="debugMenu" class="debugMenu">
+    <h2>Debug Menu</h2>
+
+    <button class="closeDebug" onclick="closeDebugMenu()">Close</button>
+
+    <h3>Enable After School</h3>
+    <p>Select which day will have an After School session:</p>
+
+    <select id="afterSchoolDaySelect">
+      <option value="Monday">Monday</option>
+      <option value="Tuesday">Tuesday</option>
+      <option value="Wednesday">Wednesday</option>
+      <option value="Thursday">Thursday</option>
+      <option value="Friday">Friday</option>
+    </select>
+
+    <button onclick="debugEnableAfterSchool()">Enable After School</button>
+
+    <h3>Reset All Data</h3>
+    <button class="danger" onclick="clearAllData()">DELETE EVERYTHING</button>
+  </div>
+
+  <script src="script.js"></script>
+
+</body>
+
+</html>
